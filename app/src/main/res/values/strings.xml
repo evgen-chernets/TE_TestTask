@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">TeamExtension</string>
+    <string name="reset">Reset</string>
+    <string name="total">"Total: %1$d Gold"</string>
+</resources>
