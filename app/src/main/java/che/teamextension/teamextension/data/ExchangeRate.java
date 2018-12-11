@@ -2,12 +2,28 @@ package che.teamextension.teamextension.data;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
+import android.support.annotation.StringDef;
+
+import java.lang.annotation.Retention;
+
+import static java.lang.annotation.RetentionPolicy.SOURCE;
 
 public class ExchangeRate {
 
-    @Currency.Name
+    @Retention(SOURCE)
+    @StringDef({GOLD, SILVER, BRONZE, COPPER})
+    public @interface Currency {
+    }
+
+    public static final String GOLD = "Gold";
+    public static final String SILVER = "Silver";
+    public static final String BRONZE = "Bronze";
+    public static final String COPPER = "Copper";
+    public static final int CURRENCIES_COUNT = 4;
+
+    @Currency
     private final String from;
-    @Currency.Name
+    @Currency
     private final String to;
     private final float rate;
 

@@ -7,13 +7,10 @@ import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import che.teamextension.teamextension.TEApplication;
-import che.teamextension.teamextension.data.Currency;
 import che.teamextension.teamextension.data.ExchangeRate;
 import che.teamextension.teamextension.data.Transaction;
 import che.teamextension.teamextension.db.TransactionDAO;
@@ -27,17 +24,17 @@ public class MainViewModel extends ViewModel {
 
     private static final String TAG = MainViewModel.class.getSimpleName();
 
-    private MutableLiveData<Set<Currency>> currenciesData = new MutableLiveData<>();
+    private MutableLiveData<Map<String, Float>> currenciesData = new MutableLiveData<>();
     private MutableLiveData<List<Transaction>> transactionsData = new MutableLiveData<>();
     private TransactionDAO transactionDAO = TEApplication.getInstance().getDatabase().transactionsDAO();
 
     public MainViewModel() {
-        currenciesData.setValue(new HashSet<>());
+        currenciesData.setValue(new HashMap<>());
         transactionsData.setValue(new ArrayList<>());
         loadRatesData();
     }
 
-    public MutableLiveData<Set<Currency>> getRatesData() {
+    public MutableLiveData<Map<String, Float>> getRatesData() {
         return currenciesData;
     }
 
@@ -90,19 +87,20 @@ public class MainViewModel extends ViewModel {
         HashMap<String, ExchangeRate> ratesMap = new HashMap<>();
         for (ExchangeRate rate : rates)
             ratesMap.put(rate.getId(), rate);
-        HashSet<Currency> currencies = new HashSet<>();
-        while (currencies.size() < Currency.CURRENCIES_COUNT) {
-            for (ExchangeRate rate : ratesMap.values())
-                if (rate.getTo().equals(Currency.GOLD))
-                    currencies.add(new Currency(rate.getFrom(), rate.getRate()));
-                else {
-                    ExchangeRate crossRate = ratesMap.get(rate.getTo() + Currency.GOLD);
+        HashMap<String, Float> currencies = new HashMap<>();
+        while (currencies.size() < ExchangeRate.CURRENCIES_COUNT - 1) {
+            ExchangeRate[] ratesArray = new ExchangeRate[ratesMap.size()];
+            ratesMap.values().toArray(ratesArray);
+            for (ExchangeRate rate : ratesArray)
+                if (rate.getTo().equals(ExchangeRate.GOLD))
+                    currencies.put(rate.getFrom(), rate.getRate());
+                else if (!rate.getFrom().equals(ExchangeRate.GOLD)) {
+                    ExchangeRate crossRate = ratesMap.get(rate.getTo() + ExchangeRate.GOLD);
                     if (crossRate != null)
-                        ratesMap.put(rate.getFrom() + Currency.GOLD, new ExchangeRate(rate.getFrom(), Currency.GOLD, 1 / rate.getRate() / crossRate.getRate()));
+                        ratesMap.put(rate.getFrom() + ExchangeRate.GOLD,
+                                new ExchangeRate(rate.getFrom(), ExchangeRate.GOLD, 1 / rate.getRate() / crossRate.getRate()));
                 }
         }
-        for (Currency c : currencies)
-            Log.d(TAG, "Currency " + c);
         currenciesData.postValue(currencies);
     }
 
