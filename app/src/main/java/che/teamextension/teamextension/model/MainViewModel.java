@@ -6,9 +6,14 @@ import android.support.annotation.NonNull;
 import android.util.Log;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import che.teamextension.teamextension.TEApplication;
+import che.teamextension.teamextension.data.Currency;
 import che.teamextension.teamextension.data.ExchangeRate;
 import che.teamextension.teamextension.data.Transaction;
 import che.teamextension.teamextension.db.TransactionDAO;
@@ -22,18 +27,18 @@ public class MainViewModel extends ViewModel {
 
     private static final String TAG = MainViewModel.class.getSimpleName();
 
-    private MutableLiveData<List<ExchangeRate>> ratesData = new MutableLiveData<>();
+    private MutableLiveData<Set<Currency>> currenciesData = new MutableLiveData<>();
     private MutableLiveData<List<Transaction>> transactionsData = new MutableLiveData<>();
     private TransactionDAO transactionDAO = TEApplication.getInstance().getDatabase().transactionsDAO();
 
     public MainViewModel() {
-        ratesData.setValue(new ArrayList<>());
+        currenciesData.setValue(new HashSet<>());
         transactionsData.setValue(new ArrayList<>());
         loadRatesData();
     }
 
-    public MutableLiveData<List<ExchangeRate>> getRatesData() {
-        return ratesData;
+    public MutableLiveData<Set<Currency>> getRatesData() {
+        return currenciesData;
     }
 
     public MutableLiveData<List<Transaction>> getTransactionsData() {
@@ -46,8 +51,7 @@ public class MainViewModel extends ViewModel {
             public void onResponse(@NonNull Call<List<ExchangeRate>> call, @NonNull Response<List<ExchangeRate>> response) {
                 if (response.isSuccessful()) {
                     Log.d(TAG, "loadRatesData onResponse isSuccessful " + response.code());
-                    calculateAbsentRates();
-                    ratesData.postValue(response.body());
+                    calculateAbsentRates(response.body());
                     loadTransactionsData();
                 } else
                     Log.d(TAG, "loadRatesData onResponse error " + response.code());
@@ -82,10 +86,24 @@ public class MainViewModel extends ViewModel {
         });
     }
 
-    private void calculateAbsentRates() {
-
-        List<ExchangeRate> rates = ratesData.getValue();
-
+    private void calculateAbsentRates(List<ExchangeRate> rates) {
+        HashMap<String, ExchangeRate> ratesMap = new HashMap<>();
+        for (ExchangeRate rate : rates)
+            ratesMap.put(rate.getId(), rate);
+        HashSet<Currency> currencies = new HashSet<>();
+        while (currencies.size() < Currency.CURRENCIES_COUNT) {
+            for (ExchangeRate rate : ratesMap.values())
+                if (rate.getTo().equals(Currency.GOLD))
+                    currencies.add(new Currency(rate.getFrom(), rate.getRate()));
+                else {
+                    ExchangeRate crossRate = ratesMap.get(rate.getTo() + Currency.GOLD);
+                    if (crossRate != null)
+                        ratesMap.put(rate.getFrom() + Currency.GOLD, new ExchangeRate(rate.getFrom(), Currency.GOLD, 1 / rate.getRate() / crossRate.getRate()));
+                }
+        }
+        for (Currency c : currencies)
+            Log.d(TAG, "Currency " + c);
+        currenciesData.postValue(currencies);
     }
 
     public void applyTransactionsFilter(String sku) {

@@ -15,8 +15,10 @@ import android.widget.ListView;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 import che.teamextension.teamextension.adapter.TransactionsListAdapter;
+import che.teamextension.teamextension.data.Currency;
 import che.teamextension.teamextension.data.ExchangeRate;
 import che.teamextension.teamextension.data.Transaction;
 import che.teamextension.teamextension.model.MainViewModel;
@@ -33,10 +35,10 @@ public class MainActivity extends AppCompatActivity {
 
         MainViewModel model = ViewModelProviders.of(this).get(MainViewModel.class);
 
-        LiveData<List<ExchangeRate>> ratesData = model.getRatesData();
-        ratesData.observe(this, rates -> {
-            for (ExchangeRate rate : rates)
-                Log.d(TAG,"rates " + rate.toString());
+        LiveData<Set<Currency>> currencies = model.getRatesData();
+        currencies.observe(this, rates -> {
+            for (Currency currency : currencies)
+                Log.d(TAG,"rates " + currency.toString());
         });
 
         LiveData<List<Transaction>> transactionsData = model.getTransactionsData();
