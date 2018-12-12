@@ -18,6 +18,7 @@ public class TEApplication extends Application {
         database = Room.databaseBuilder(this, TransactionsDatabase.class, "database")
                 .allowMainThreadQueries()
                 .build();
+        database.clearAllTables();
     }
 
     public static TEApplication getInstance() {

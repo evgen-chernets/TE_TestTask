@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import che.teamextension.teamextension.TEApplication;
 import che.teamextension.teamextension.data.ExchangeRate;
@@ -26,6 +27,7 @@ public class MainViewModel extends ViewModel {
 
     private MutableLiveData<Map<String, Float>> currenciesData = new MutableLiveData<>();
     private MutableLiveData<List<Transaction>> transactionsData = new MutableLiveData<>();
+    private MutableLiveData<Boolean> dataProcessingFinished = new MutableLiveData<>();
     private TransactionDAO transactionDAO = TEApplication.getInstance().getDatabase().transactionsDAO();
 
     public MainViewModel() {
@@ -40,6 +42,10 @@ public class MainViewModel extends ViewModel {
 
     public MutableLiveData<List<Transaction>> getTransactionsData() {
         return transactionsData;
+    }
+
+    public MutableLiveData<Boolean> getProcessingFinished() {
+        return dataProcessingFinished;
     }
 
     private void loadRatesData() {
@@ -61,28 +67,6 @@ public class MainViewModel extends ViewModel {
         });
     }
 
-    private void loadTransactionsData() {
-        DataRepository.getService().requestTransactions().enqueue(new Callback<List<Transaction>>() {
-            @Override
-            public void onResponse(@NonNull Call<List<Transaction>> call, @NonNull Response<List<Transaction>> response) {
-                if (response.isSuccessful()) {
-                    Log.d(TAG, "loadTransactionsData onResponse isSuccessful " + response.code());
-                    List<Transaction> transactions = response.body();
-                    Log.d(TAG, "loadTransactionsData onResponse transactions " + transactions.size());
-                    for (Transaction transaction : transactions)
-                        transactionDAO.insert(transaction);
-                    transactionsData.postValue(transactions);
-                } else
-                    Log.d(TAG, "loadTransactionsData onResponse error " + response.code());
-            }
-
-            @Override
-            public void onFailure(@NonNull Call<List<Transaction>> call, @NonNull Throwable t) {
-                Log.d(TAG, "loadTransactionsData onFailure error " + t.getMessage());
-            }
-        });
-    }
-
     private void calculateAbsentRates(List<ExchangeRate> rates) {
         HashMap<String, ExchangeRate> ratesMap = new HashMap<>();
         for (ExchangeRate rate : rates)
@@ -98,10 +82,46 @@ public class MainViewModel extends ViewModel {
                     ExchangeRate crossRate = ratesMap.get(rate.getTo() + ExchangeRate.GOLD);
                     if (crossRate != null)
                         ratesMap.put(rate.getFrom() + ExchangeRate.GOLD,
-                                new ExchangeRate(rate.getFrom(), ExchangeRate.GOLD, 1 / rate.getRate() / crossRate.getRate()));
+                                new ExchangeRate(rate.getFrom(), ExchangeRate.GOLD, rate.getRate() * crossRate.getRate()));
                 }
         }
         currenciesData.postValue(currencies);
+    }
+
+    private void loadTransactionsData() {
+        DataRepository.getService().requestTransactions().enqueue(new Callback<List<Transaction>>() {
+            @Override
+            public void onResponse(@NonNull Call<List<Transaction>> call, @NonNull Response<List<Transaction>> response) {
+                if (response.isSuccessful()) {
+                    Log.d(TAG, "loadTransactionsData onResponse isSuccessful " + response.code());
+                    List<Transaction> transactions = response.body();
+                    Log.d(TAG, "loadTransactionsData onResponse transactions " + transactions.size());
+                    transactionsData.postValue(transactions);
+                    Executors.newSingleThreadExecutor().execute(new InsertJob(transactions));
+                } else
+                    Log.d(TAG, "loadTransactionsData onResponse error " + response.code());
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<List<Transaction>> call, @NonNull Throwable t) {
+                Log.d(TAG, "loadTransactionsData onFailure error " + t.getMessage());
+            }
+        });
+    }
+
+    private class InsertJob implements Runnable {
+
+        List<Transaction> transactions;
+        InsertJob(List<Transaction> transactions) {
+            this.transactions = transactions;
+        }
+
+        @Override
+        public void run() {
+            for (Transaction transaction : transactions)
+                transactionDAO.insert(transaction);
+            dataProcessingFinished.postValue(true);
+        }
     }
 
     public void applyTransactionsFilter(String sku) {
@@ -112,12 +132,5 @@ public class MainViewModel extends ViewModel {
     public void resetTransactions() {
         Log.d(TAG, "resetTransactions");
         transactionsData.postValue(transactionDAO.getAll());
-    }
-
-    @Override
-    protected void onCleared() {
-        Log.d(TAG, "onCleared");
-        TEApplication.getInstance().getDatabase().clearAllTables();
-        super.onCleared();
     }
 }

@@ -5,6 +5,7 @@ import android.arch.lifecycle.ViewModelProviders;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.ListView;
 import android.widget.TextView;
 
@@ -51,5 +52,7 @@ public class MainActivity extends AppCompatActivity {
         transactionsList.setOnItemClickListener((adapterView, view, i, l) -> model.applyTransactionsFilter((String) view.getTag()));
 
         findViewById(R.id.button_reset).setOnClickListener(view -> model.resetTransactions());
+
+        model.getProcessingFinished().observe(this, finished -> findViewById(R.id.progress_group).setVisibility(View.GONE));
     }
 }

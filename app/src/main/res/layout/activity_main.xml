@@ -7,6 +7,30 @@
     tools:context=".MainActivity">
 
     <TextView
+        android:id="@+id/progress_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="20dp"
+        android:text="@string/processing_data"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="parent"/>
+
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        android:layout_width="wrap_content"
+        android:layout_height="0dp"
+        android:indeterminate="true"
+        app:layout_constraintLeft_toRightOf="@+id/progress_hint"
+        app:layout_constraintTop_toTopOf="@id/progress_hint"
+        app:layout_constraintBottom_toBottomOf="@id/progress_hint"/>
+
+    <android.support.constraint.Group
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/progress_group"
+        app:constraint_referenced_ids="progress_hint, progress_bar" />
+
+    <TextView
         android:id="@+id/total_text_view"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -39,6 +63,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
-        app:layout_constraintGuide_percent="0.3" />
+        app:layout_constraintGuide_percent="0.2" />
 
 </android.support.constraint.ConstraintLayout>
