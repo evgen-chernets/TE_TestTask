@@ -124,9 +124,11 @@ public class MainViewModel extends ViewModel {
             for (Transaction transaction : transactions)
                 transactionDAO.insert(transaction);
             dataProcessingFinished.postValue(true);
-            if (skuFilter != null)
-                applyTransactionsFilter(skuFilter);
-            else
+            if (skuFilter != null) {
+                String filter = skuFilter;      //this strange moves needed for reapplying the same
+                skuFilter = null;               //filter on completely filled db, so this reapplying
+                applyTransactionsFilter(filter);//may return bigger list of items
+            } else
                 resetTransactionsFilter();
         }
     }
