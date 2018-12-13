@@ -8,7 +8,6 @@ import android.util.Log;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.Executors;
 
 import che.teamextension.teamextension.TEApplication;
@@ -25,19 +24,17 @@ public class MainViewModel extends ViewModel {
 
     private static final String TAG = MainViewModel.class.getSimpleName();
 
-    private MutableLiveData<Map<String, Float>> currenciesData = new MutableLiveData<>();
+    private TransactionDAO transactionDAO = TEApplication.getInstance().getDatabase().transactionsDAO();
     private MutableLiveData<List<Transaction>> transactionsData = new MutableLiveData<>();
     private MutableLiveData<Boolean> dataProcessingFinished = new MutableLiveData<>();
-    private TransactionDAO transactionDAO = TEApplication.getInstance().getDatabase().transactionsDAO();
+    private MutableLiveData<Float> totalGold = new MutableLiveData<>();
+    private HashMap<String, Float> currencies;
+    private String skuFilter;
 
     public MainViewModel() {
-        currenciesData.setValue(new HashMap<>());
         transactionsData.setValue(new ArrayList<>());
+        totalGold.setValue(0f);
         loadRatesData();
-    }
-
-    public MutableLiveData<Map<String, Float>> getRatesData() {
-        return currenciesData;
     }
 
     public MutableLiveData<List<Transaction>> getTransactionsData() {
@@ -46,6 +43,10 @@ public class MainViewModel extends ViewModel {
 
     public MutableLiveData<Boolean> getProcessingFinished() {
         return dataProcessingFinished;
+    }
+
+    public MutableLiveData<Float> getTotalGoldData() {
+        return totalGold;
     }
 
     private void loadRatesData() {
@@ -71,7 +72,7 @@ public class MainViewModel extends ViewModel {
         HashMap<String, ExchangeRate> ratesMap = new HashMap<>();
         for (ExchangeRate rate : rates)
             ratesMap.put(rate.getId(), rate);
-        HashMap<String, Float> currencies = new HashMap<>();
+        currencies = new HashMap<>();
         while (currencies.size() < ExchangeRate.CURRENCIES_COUNT - 1) {
             ExchangeRate[] ratesArray = new ExchangeRate[ratesMap.size()];
             ratesMap.values().toArray(ratesArray);
@@ -85,7 +86,8 @@ public class MainViewModel extends ViewModel {
                                 new ExchangeRate(rate.getFrom(), ExchangeRate.GOLD, rate.getRate() * crossRate.getRate()));
                 }
         }
-        currenciesData.postValue(currencies);
+        for (String name : currencies.keySet())
+            Log.d(TAG, "rates " + name + " " + currencies.get(name));
     }
 
     private void loadTransactionsData() {
@@ -112,6 +114,7 @@ public class MainViewModel extends ViewModel {
     private class InsertJob implements Runnable {
 
         List<Transaction> transactions;
+
         InsertJob(List<Transaction> transactions) {
             this.transactions = transactions;
         }
@@ -121,16 +124,35 @@ public class MainViewModel extends ViewModel {
             for (Transaction transaction : transactions)
                 transactionDAO.insert(transaction);
             dataProcessingFinished.postValue(true);
+            if (skuFilter != null)
+                applyTransactionsFilter(skuFilter);
+            else
+                resetTransactionsFilter();
         }
     }
 
     public void applyTransactionsFilter(String sku) {
-        Log.d(TAG, "applyTransactionsFilter " + sku);
-        transactionsData.postValue(transactionDAO.getBySku(sku));
+        if (sku.equals(skuFilter)) return;
+        skuFilter = sku;
+        List<Transaction> filterdList = transactionDAO.getBySku(skuFilter);
+        updateTotal(filterdList);
+        transactionsData.postValue(filterdList);
+        Log.d(TAG, "applyTransactionsFilter " + skuFilter);
     }
 
-    public void resetTransactions() {
-        Log.d(TAG, "resetTransactions");
-        transactionsData.postValue(transactionDAO.getAll());
+    public void resetTransactionsFilter() {
+        Log.d(TAG, "resetTransactionsFilter");
+        skuFilter = null;
+        List<Transaction> transactions = transactionDAO.getAll();
+        updateTotal(transactions);
+        transactionsData.postValue(transactions);
+    }
+
+    private void updateTotal(List<Transaction> transactions) {
+        float total = 0;
+        for (Transaction transaction : transactions)
+            total += transaction.currency.equals(ExchangeRate.GOLD) ? transaction.amount :
+                    transaction.amount * currencies.get(transaction.currency);
+        totalGold.postValue(total);
     }
 }

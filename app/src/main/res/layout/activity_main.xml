@@ -8,26 +8,27 @@
 
     <TextView
         android:id="@+id/progress_hint"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="20dp"
+        android:layout_marginTop="10dp"
         android:text="@string/processing_data"
-        app:layout_constraintLeft_toLeftOf="parent"
-        app:layout_constraintTop_toTopOf="parent"/>
+        app:layout_constraintLeft_toRightOf="@+id/progress_bar"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <ProgressBar
         android:id="@+id/progress_bar"
         android:layout_width="wrap_content"
         android:layout_height="0dp"
         android:indeterminate="true"
-        app:layout_constraintLeft_toRightOf="@+id/progress_hint"
-        app:layout_constraintTop_toTopOf="@id/progress_hint"
-        app:layout_constraintBottom_toBottomOf="@id/progress_hint"/>
+        app:layout_constraintBottom_toBottomOf="@id/progress_hint"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toTopOf="@id/progress_hint" />
 
     <android.support.constraint.Group
+        android:id="@+id/progress_group"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:id="@+id/progress_group"
         app:constraint_referenced_ids="progress_hint, progress_bar" />
 
     <TextView
@@ -46,7 +47,7 @@
         android:layout_margin="10dp"
         android:text="@string/reset"
         app:layout_constraintBottom_toTopOf="@id/guideline_h1"
-        app:layout_constraintRight_toRightOf="parent"/>
+        app:layout_constraintRight_toRightOf="parent" />
 
     <ListView
         android:id="@+id/transactions_list"
